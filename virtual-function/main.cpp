@@ -31,13 +31,16 @@ int main()
     CDerived derived;
     derived.a = 1;
     derived.b = 1;
-
     CBase* reallyDerived = reinterpret_cast<CBase*>(&derived);
 
-    VIRTUAL_CALL( &base, Both );
-    VIRTUAL_CALL( reallyDerived, Both );
-    VIRTUAL_CALL( reallyDerived, OnlyBase );
-    VIRTUAL_CALL( reallyDerived, OnlyDerived );
+    try {
+        VIRTUAL_CALL( &base, Both );
+        VIRTUAL_CALL( reallyDerived, Both );
+        VIRTUAL_CALL( reallyDerived, OnlyBase );
+        VIRTUAL_CALL( reallyDerived, OnlyDerived );
+    } catch( std::runtime_error ex ) {
+        std::cout << ex.what() << "\n";
+    }
     /* Should be printed:
      * CBase::Both
      * a = 0
@@ -45,8 +48,7 @@ int main()
      * b = 1
      * CBase::OnlyBase
      * a = 1
-     * CDerived::OnlyDerived
-     * b = 1
+     * reallyDerived has no method OnlyDerived
     */
 
     system( "pause" );

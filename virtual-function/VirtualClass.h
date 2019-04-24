@@ -1,18 +1,23 @@
 #pragma once
 #include <map>
 #include <string>
-#include <list>
 
 typedef void (*TVirtualMethod)( void* );
 
+std::map<std::string, std::map<std::string, TVirtualMethod>> classMethods;
+
 // virtual class without base
 #define VIRTUAL_CLASS( className ) \
-std::list<std::pair<std::string, TVirtualMethod>> initMethods##className; \
+/* insert new class into map */ \
+int insertClass##className = []()->int { \
+    classMethods[#className] = std::map<std::string, TVirtualMethod>(); \
+    return 0; \
+}(); \
 struct className { \
     std::string Name = #className; \
     std::map<std::string, TVirtualMethod> VirtualTable; \
     className() { \
-        for (auto item : initMethods##className ) { \
+        for (auto item : classMethods[#className] ) { \
             VirtualTable[item.first] = item.second; \
         } \
     }
@@ -30,21 +35,29 @@ void className##methodName( void* self_ ) { \
 } \
 /* insert method in init list */ \
 int insert##className##methodName = []()->int { \
-    initMethods##className.push_back( std::pair<std::string, TVirtualMethod>( #methodName, className##methodName ) ); \
+    classMethods[#className][#methodName] = className##methodName; \
     return 0; \
 }();
 
-
 // virtual class derived from base
 #define VIRTUAL_CLASS_DERIVED( className, baseClassName ) \
-std::list<std::pair<std::string, TVirtualMethod>> initMethods##className; \
+/* insert new class into map */ \
+int insertClass##className = []()->int { \
+    classMethods[#className] = std::map<std::string, TVirtualMethod>(); \
+    return 0; \
+}(); \
 struct className : baseClassName { \
+    std::string Name = #className; \
     className() { \
-        for (auto item : initMethods##className ) { \
+        for (auto item : classMethods[#className] ) { \
             VirtualTable[item.first] = item.second; \
         } \
     }
 
 // call virtual method
 #define VIRTUAL_CALL( self, methodName ) \
-(self)->VirtualTable[#methodName]( self );
+if ( classMethods[(self)->Name].find( #methodName ) != classMethods[(self)->Name].end() ) { \
+    (self)->VirtualTable[#methodName]( self ); \
+} else { \
+    throw std::runtime_error( #self " has no method " #methodName ); \
+}
